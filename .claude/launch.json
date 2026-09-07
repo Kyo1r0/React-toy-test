@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api-lab",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["api-lab/server.js"],
+      "port": 3000
+    }
+  ]
+}

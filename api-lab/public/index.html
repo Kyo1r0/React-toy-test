@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API体験ラボ</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%94%8C%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <h1>API体験ラボ</h1>
+  <p class="lead">
+    このページ自体が <strong>APIクライアント</strong>です。ボタンを押すと本当に通信が起き、
+    その<strong>行き帰りの中身をそのまま画面に出します</strong>。「APIの仕組み」を、APIを使って説明するページ。
+  </p>
+</header>
+
+<div class="layout">
+<main>
+
+<!-- ===================== 0. APIとは ===================== -->
+<section class="card">
+  <h2><span class="num">0</span> APIとは何か</h2>
+  <p>
+    APIは<strong>「決まった住所に、決まった形でお願いすると、決まった形で返事が来る窓口」</strong>です。
+    人間向けのWebページがHTMLを返すのに対し、APIは<strong>プログラム向けにデータ（JSON）を返します</strong>。
+  </p>
+
+  <div class="flow">
+    <div class="node">あなたのブラウザ<span>クライアント</span></div>
+    <div class="arrow">
+      <span class="arrow-label">リクエスト</span>
+      <span class="arrow-line">──▶</span>
+      <code>GET /api/hello?name=Kyo</code>
+    </div>
+    <div class="node">サーバー<span>API</span></div>
+  </div>
+  <div class="flow reverse">
+    <div class="node ghost"></div>
+    <div class="arrow">
+      <span class="arrow-label">レスポンス</span>
+      <span class="arrow-line">◀──</span>
+      <code>200 OK + {"message":"こんにちは…"}</code>
+    </div>
+    <div class="node ghost"></div>
+  </div>
+
+  <div class="grid4">
+    <div class="mini"><h3>① エンドポイント</h3><p>どこに頼むか。URL。<code>/api/todos</code></p></div>
+    <div class="mini"><h3>② メソッド</h3><p>何をしたいか。<code>GET</code>=取得 / <code>POST</code>=作成</p></div>
+    <div class="mini"><h3>③ ステータスコード</h3><p>結果の要約。<code>200</code>成功 / <code>404</code>無い</p></div>
+    <div class="mini"><h3>④ ボディ</h3><p>実際のデータ本体。ふつうJSON。</p></div>
+  </div>
+
+  <p class="note">
+    以降のセクションで、この4つが実際にどう動くかを見ます。右の<strong>通信ログ</strong>と、
+    サーバーを起動したターミナルの出力を見比べると「同じ通信を両側から見ている」ことがわかります。
+  </p>
+</section>
+
+<!-- ===================== 1. 外部API ===================== -->
+<section class="card">
+  <h2><span class="num">1</span> 他人のAPIをGETする（天気予報API）</h2>
+  <p>
+    <a href="https://weather.tsukumijima.net/" target="_blank" rel="noopener">weather.tsukumijima.net</a>
+    が公開している天気予報APIを叩きます。登録もキーも不要、<strong>URLを開くだけ</strong>でJSONが返ってくるタイプのAPIです。
+  </p>
+
+  <div class="controls">
+    <label>都市
+      <select id="city">
+        <option value="016010">札幌</option>
+        <option value="040010">仙台</option>
+        <option value="130010" selected>東京</option>
+        <option value="230010">名古屋</option>
+        <option value="270000">大阪</option>
+        <option value="400010">福岡</option>
+        <option value="471010">那覇</option>
+      </select>
+    </label>
+
+    <fieldset class="routes">
+      <legend>どの経路で取りに行くか</legend>
+      <label><input type="radio" name="route" value="direct" checked> ブラウザから直接</label>
+      <label><input type="radio" name="route" value="proxy"> 自分のサーバー経由</label>
+    </fieldset>
+
+    <button id="send-weather" class="primary">リクエストを送る</button>
+  </div>
+
+  <div class="flow route-diagram" id="route-diagram">
+    <div class="node" data-hop="browser">ブラウザ</div>
+    <div class="arrow" data-hop="hop1"><span class="arrow-line">──▶</span></div>
+    <div class="node" data-hop="server">自分のサーバー<span>localhost:3000</span></div>
+    <div class="arrow" data-hop="hop2"><span class="arrow-line">──▶</span></div>
+    <div class="node" data-hop="upstream">天気予報API<span>weather.tsukumijima.net</span></div>
+  </div>
+  <p class="note" id="route-note"></p>
+
+  <div id="weather-result"></div>
+  <div id="weather-exchange"></div>
+</section>
+
+<!-- ===================== 2. 自作API ===================== -->
+<section class="card">
+  <h2><span class="num">2</span> 自作APIを自分で呼ぶ</h2>
+  <p>
+    今度は <code>server.js</code> に自分で書いたAPIを叩きます。
+    一覧は決め打ちではなく、サーバーの <code>GET /api/__routes</code> を叩いて取ってきたものです
+    （APIの説明をAPIで取得している）。
+  </p>
+
+  <div id="endpoint-list" class="endpoints">読み込み中…</div>
+
+  <div class="builder">
+    <div class="builder-row">
+      <select id="req-method">
+        <option>GET</option><option>POST</option><option>DELETE</option>
+      </select>
+      <input id="req-path" type="text" value="/api/hello?name=Kyo" spellcheck="false">
+      <button id="send-own" class="primary">送信</button>
+    </div>
+    <label class="checkline">
+      <input type="checkbox" id="req-key"> <code>X-Api-Key: mma-demo-key</code> ヘッダーを付ける
+    </label>
+    <label class="bodyline" id="body-wrap" hidden>
+      リクエストボディ (JSON)
+      <textarea id="req-body" rows="4" spellcheck="false"></textarea>
+    </label>
+  </div>
+
+  <div id="own-exchange"></div>
+  <div id="own-source"></div>
+</section>
+
+<!-- ===================== 3. まとめ ===================== -->
+<section class="card">
+  <h2><span class="num">3</span> 早見表</h2>
+
+  <h3>メソッド</h3>
+  <table>
+    <tr><th>GET</th><td>取る。何回やっても状態は変わらない。ボディは無い。</td></tr>
+    <tr><th>POST</th><td>作る・送る。ボディにJSONを入れる。叩くたびに増える。</td></tr>
+    <tr><th>PUT / PATCH</th><td>まるごと置き換え / 一部だけ更新。</td></tr>
+    <tr><th>DELETE</th><td>消す。</td></tr>
+  </table>
+
+  <h3>ステータスコード</h3>
+  <table>
+    <tr><th>2xx</th><td>成功。<code>200 OK</code> / <code>201 Created</code> / <code>204 No Content</code></td></tr>
+    <tr><th>4xx</th><td><strong>頼んだ側</strong>のミス。<code>400</code>形式が変 / <code>401</code>合言葉が無い / <code>404</code>そんなものは無い</td></tr>
+    <tr><th>5xx</th><td><strong>サーバー側</strong>のミス。<code>500</code>内部エラー / <code>502</code>上流のAPIがこけた</td></tr>
+  </table>
+
+  <h3>ブラウザから直接 vs サーバー経由</h3>
+  <table>
+    <tr><th></th><th>直接</th><th>サーバー経由</th></tr>
+    <tr><th>速さ</th><td>速い（1往復）</td><td>やや遅い（2往復）</td></tr>
+    <tr><th>CORS</th><td>相手が許可していないと<strong>ブラウザに止められる</strong></td><td>関係ない（CORSはブラウザだけのルール）</td></tr>
+    <tr><th>レスポンスヘッダー</th><td>数個しか読めない</td><td>全部読める</td></tr>
+    <tr><th>APIキー</th><td>コードに書くと<strong>丸見え</strong></td><td>サーバーに隠せる</td></tr>
+  </table>
+</section>
+
+</main>
+
+<!-- ===================== 通信ログ ===================== -->
+<aside class="log-panel">
+  <h2>通信ログ</h2>
+  <p class="note">このページが実際に発生させた通信。</p>
+  <ol id="log-list" class="log-list"></ol>
+</aside>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

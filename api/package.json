@@ -1,7 +1,0 @@
-{
-  "workspaces": ["shared", "api", "fizzbuzz", "web"],
-  "scripts": {
-    "dev": "concurrently -n fb,api,web \"npm -w fizzbuzz run dev\" \"npm -w api run dev\" \"npm -w web run dev\"",
-    "db:migrate": "npm -w api run db:migrate"
-  }
-}

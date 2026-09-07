@@ -1,0 +1,13 @@
+{
+  "name": "api-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "APIの仕組みを体験しながら学ぶWebアプリ (依存パッケージなし)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
