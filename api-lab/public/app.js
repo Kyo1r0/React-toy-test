@@ -233,9 +233,12 @@ async function loadRoutes() {
   pushLog('ブラウザ → 自分のサーバー', 'GET', '/api/__routes', res.status, Math.round(performance.now() - t0));
 
   routeMeta = json.routes;
+  // hidden(= 天気の中継役や、この一覧自身)は、練習用の一覧には出さない
   $('#endpoint-list').innerHTML = routeMeta
+    .map((r, i) => ({ r, i }))
+    .filter((x) => !x.r.hidden)
     .map(
-      (r, i) => `<button class="ep" data-i="${i}">
+      ({ r, i }) => `<button class="ep" data-i="${i}">
         <span class="m ${r.method}">${r.method}</span>
         <span class="p">${esc(r.path)}</span>
         <span class="s">${esc(r.summary)}</span>
@@ -249,7 +252,6 @@ async function loadRoutes() {
     const r = routeMeta[Number(btn.dataset.i)];
     $('#req-method').value = r.method;
     $('#req-path').value = r.example;
-    $('#req-key').checked = r.needsKey;
     $('#req-body').value = r.sampleBody ? JSON.stringify(r.sampleBody, null, 2) : '';
     syncBodyVisibility();
   });
@@ -261,12 +263,7 @@ function syncBodyVisibility() {
 
 /** 実際に呼ばれた handler のソースを探す（説明表示用） */
 function findMeta(method, pathname) {
-  return routeMeta.find((r) => {
-    if (r.method !== method) return false;
-    const a = r.path.split('/');
-    const b = pathname.split('/');
-    return a.length === b.length && a.every((seg, i) => seg.startsWith(':') || seg === b[i]);
-  });
+  return routeMeta.find((r) => r.method === method && r.path === pathname);
 }
 
 async function sendOwn() {
@@ -274,7 +271,6 @@ async function sendOwn() {
   const method = $('#req-method').value;
   const pathStr = $('#req-path').value.trim();
   const headers = { Accept: 'application/json' };
-  if ($('#req-key').checked) headers['X-Api-Key'] = 'mma-demo-key';
 
   let body;
   if (method !== 'GET' && $('#req-body').value.trim()) {
@@ -301,7 +297,7 @@ async function sendOwn() {
       response: responseText(
         res.status,
         [...res.headers.entries()],
-        text || '（本文なし。204 は「成功したが返す中身は無い」の意味）'
+        text || '（本文なし）'
       ),
     });
 

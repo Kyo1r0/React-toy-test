@@ -48,7 +48,7 @@
   </div>
 
   <div class="grid4">
-    <div class="mini"><h3>① エンドポイント</h3><p>どこに頼むか。URL。<code>/api/todos</code></p></div>
+    <div class="mini"><h3>① エンドポイント</h3><p>どこに頼むか。URL。<code>/api/hello</code></p></div>
     <div class="mini"><h3>② メソッド</h3><p>何をしたいか。<code>GET</code>=取得 / <code>POST</code>=作成</p></div>
     <div class="mini"><h3>③ ステータスコード</h3><p>結果の要約。<code>200</code>成功 / <code>404</code>無い</p></div>
     <div class="mini"><h3>④ ボディ</h3><p>実際のデータ本体。ふつうJSON。</p></div>
@@ -108,25 +108,25 @@
   <h2><span class="num">2</span> 自作APIを自分で呼ぶ</h2>
   <p>
     今度は <code>server.js</code> に自分で書いたAPIを叩きます。
-    一覧は決め打ちではなく、サーバーの <code>GET /api/__routes</code> を叩いて取ってきたものです
-    （APIの説明をAPIで取得している）。
+    <strong>情報の渡し方が2通りある</strong>ことを見るための2本だけです。
   </p>
 
   <div id="endpoint-list" class="endpoints">読み込み中…</div>
+  <p class="note">
+    ↑ この一覧はHTMLに直接書いたものではなく、<code>GET /api/__routes</code> を叩いて取ってきています
+    （APIの説明をAPIで配っている）。
+  </p>
 
   <div class="builder">
     <div class="builder-row">
       <select id="req-method">
-        <option>GET</option><option>POST</option><option>DELETE</option>
+        <option>GET</option><option>POST</option>
       </select>
       <input id="req-path" type="text" value="/api/hello?name=Kyo" spellcheck="false">
       <button id="send-own" class="primary">送信</button>
     </div>
-    <label class="checkline">
-      <input type="checkbox" id="req-key"> <code>X-Api-Key: mma-demo-key</code> ヘッダーを付ける
-    </label>
     <label class="bodyline" id="body-wrap" hidden>
-      リクエストボディ (JSON)
+      リクエストボディ (JSON) ─ <code>"7"</code> のように文字列にすると <code>400</code> が返ります
       <textarea id="req-body" rows="4" spellcheck="false"></textarea>
     </label>
   </div>

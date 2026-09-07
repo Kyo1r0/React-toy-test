@@ -16,18 +16,7 @@ const path = require('node:path');
 
 const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const API_KEY = 'mma-demo-key';
 const WEATHER_BASE = 'https://weather.tsukumijima.net/api/forecast/city';
-
-// ---------------------------------------------------------------------------
-// サーバーがメモリ上に持っている「データベース」もどき。
-// 再起動すると消える。APIが状態を持つ様子を見せるためだけのもの。
-// ---------------------------------------------------------------------------
-let todos = [
-  { id: 1, title: 'APIの仕組みを理解する', done: false },
-  { id: 2, title: '外部APIをGETしてみる', done: true },
-];
-let nextId = 3;
 
 // ---------------------------------------------------------------------------
 // 自作APIのルート定義。
@@ -55,114 +44,34 @@ const routes = [
   },
 
   {
-    method: 'GET',
-    path: '/api/dice',
-    summary: 'サイコロを振る。変な値を渡すと 400 が返る = 入力チェックの例。',
-    example: '/api/dice?sides=6&count=3',
-    handler: (ctx) => {
-      const sides = Number(ctx.query.get('sides') ?? 6);
-      const count = Number(ctx.query.get('count') ?? 1);
-      if (!Number.isInteger(sides) || sides < 2 || sides > 100) {
-        return {
-          status: 400,
-          body: { error: { code: 'INVALID_PARAM', message: 'sides は 2〜100 の整数で指定してください' } },
-        };
-      }
-      const rolls = Array.from(
-        { length: Math.min(Math.max(count, 1), 10) },
-        () => 1 + Math.floor(Math.random() * sides)
-      );
-      return { status: 200, body: { sides, rolls, total: rolls.reduce((a, b) => a + b, 0) } };
-    },
-  },
-
-  {
-    method: 'GET',
-    path: '/api/todos',
-    summary: 'TODO一覧を返す。GET = 取得。何回叩いても状態は変わらない。',
-    example: '/api/todos',
-    handler: () => {
-      return { status: 200, body: { count: todos.length, items: todos } };
-    },
-  },
-
-  {
     method: 'POST',
-    path: '/api/todos',
-    summary: 'TODOを1件追加する。POST = 作成。成功すると 201 と Location ヘッダーが返る。',
-    example: '/api/todos',
-    sampleBody: { title: 'POSTでデータを作ってみる' },
+    path: '/api/square',
+    summary: '数字を送ると2乗して返す。POSTは情報をURLではなくボディに入れる。',
+    example: '/api/square',
+    sampleBody: { number: 7 },
     handler: (ctx) => {
-      const title = ctx.body && ctx.body.title;
-      if (typeof title !== 'string' || title.trim() === '') {
+      const number = ctx.body && ctx.body.number;
+      // 送られてきたものが本当に数字か、サーバー側で必ず確かめる
+      if (typeof number !== 'number' || !Number.isFinite(number)) {
         return {
           status: 400,
-          body: { error: { code: 'TITLE_REQUIRED', message: 'title(文字列)が必要です' } },
-        };
-      }
-      const todo = { id: nextId++, title: title.trim(), done: false };
-      todos.push(todo);
-      return { status: 201, body: todo, headers: { Location: `/api/todos/${todo.id}` } };
-    },
-  },
-
-  {
-    method: 'GET',
-    path: '/api/todos/:id',
-    summary: 'TODOを1件返す。URLの一部が変数(パスパラメータ)。無いIDなら 404。',
-    example: '/api/todos/1',
-    handler: (ctx) => {
-      const todo = todos.find((t) => t.id === Number(ctx.params.id));
-      if (!todo) {
-        return {
-          status: 404,
-          body: { error: { code: 'NOT_FOUND', message: `id=${ctx.params.id} のTODOはありません` } },
-        };
-      }
-      return { status: 200, body: todo };
-    },
-  },
-
-  {
-    method: 'DELETE',
-    path: '/api/todos/:id',
-    summary: 'TODOを削除する。成功しても本文は返さない = 204 No Content。',
-    example: '/api/todos/1',
-    handler: (ctx) => {
-      const before = todos.length;
-      todos = todos.filter((t) => t.id !== Number(ctx.params.id));
-      if (todos.length === before) {
-        return { status: 404, body: { error: { code: 'NOT_FOUND', message: '削除対象がありません' } } };
-      }
-      return { status: 204, body: null };
-    },
-  },
-
-  {
-    method: 'GET',
-    path: '/api/secret',
-    summary: '合言葉(APIキー)が要るエンドポイント。ヘッダーが無いと 401。',
-    example: '/api/secret',
-    needsKey: true,
-    handler: (ctx) => {
-      if (ctx.headers['x-api-key'] !== API_KEY) {
-        return {
-          status: 401,
           body: {
             error: {
-              code: 'UNAUTHORIZED',
-              message: 'X-Api-Key ヘッダーが必要です（このデモの合言葉は mma-demo-key）',
+              code: 'NUMBER_REQUIRED',
+              message: 'number には数値を入れてください（"7" のような文字列はダメ）',
+              received: number === undefined ? null : number,
             },
           },
         };
       }
-      return { status: 200, body: { message: '認証OK！ヘッダーは「誰が呼んだか」を伝える場所。' } };
+      return { status: 200, body: { number, squared: number * number } };
     },
   },
 
   {
     method: 'GET',
     path: '/api/weather',
+    hidden: true,
     summary: '外部APIを"サーバー経由"で呼ぶ中継役。上流の生の情報ごと返す。',
     example: '/api/weather?city=130010',
     handler: async (ctx) => {
@@ -199,18 +108,18 @@ const routes = [
     path: '/api/__routes',
     summary: 'このサーバーが持つAPIの一覧（自己紹介）。handlerのソースも一緒に返す。',
     example: '/api/__routes',
+    hidden: true,
     handler: () => {
       return {
         status: 200,
         body: {
-          apiKeyForDemo: API_KEY,
           routes: routes.map((r) => ({
             method: r.method,
             path: r.path,
             summary: r.summary,
             example: r.example,
             sampleBody: r.sampleBody || null,
-            needsKey: Boolean(r.needsKey),
+            hidden: Boolean(r.hidden),
             source: r.handler.toString(),
           })),
         },
@@ -223,27 +132,9 @@ const routes = [
 // ここから下は「配線」。URLと handler を繋ぐだけの部分。
 // ---------------------------------------------------------------------------
 
-/** GET /api/todos/3 のような具体URLを /api/todos/:id の定義に対応づける */
-function matchRoute(method, pathname) {
-  for (const route of routes) {
-    if (route.method !== method) continue;
-    const defined = route.path.split('/');
-    const actual = pathname.split('/');
-    if (defined.length !== actual.length) continue;
-
-    const params = {};
-    let matched = true;
-    for (let i = 0; i < defined.length; i++) {
-      if (defined[i].startsWith(':')) {
-        params[defined[i].slice(1)] = decodeURIComponent(actual[i]);
-      } else if (defined[i] !== actual[i]) {
-        matched = false;
-        break;
-      }
-    }
-    if (matched) return { route, params };
-  }
-  return null;
+/** メソッドとパスの両方が一致する route を探す。両方揃って初めて「同じ窓口」 */
+function findRoute(method, pathname) {
+  return routes.find((r) => r.method === method && r.path === pathname);
 }
 
 /** リクエストボディ(JSON)を読み切る */
@@ -328,8 +219,8 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'OPTIONS') {
     return sendJson(res, 204, null, {
-      'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type,X-Api-Key',
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
     });
   }
 
@@ -340,8 +231,8 @@ const server = http.createServer(async (req, res) => {
     return serveStatic(req, res, url.pathname);
   }
 
-  const hit = matchRoute(req.method, url.pathname);
-  if (!hit) {
+  const route = findRoute(req.method, url.pathname);
+  if (!route) {
     return sendJson(res, 404, {
       error: {
         code: 'NO_SUCH_ENDPOINT',
@@ -359,9 +250,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
-    const result = await hit.route.handler({
+    const result = await route.handler({
       query: url.searchParams,
-      params: hit.params,
       headers: req.headers,
       body,
     });
@@ -370,6 +260,19 @@ const server = http.createServer(async (req, res) => {
     console.error(err);
     sendJson(res, 500, { error: { code: 'INTERNAL_ERROR', message: err.message } });
   }
+});
+
+// 既に3000番で何かが動いていると listen できずに落ちるので、理由を説明して終わる
+server.on('error', (err) => {
+  if (err.code !== 'EADDRINUSE') throw err;
+  console.error('');
+  console.error(`  ポート ${PORT} は既に他のプロセスが使っています。`);
+  console.error('  先に起動しているサーバーを止めるか、別のポートで起動してください:');
+  console.error('');
+  console.error('    PowerShell : $env:PORT=3001; node api-lab/server.js');
+  console.error('    Git Bash   : PORT=3001 node api-lab/server.js');
+  console.error('');
+  process.exit(1);
 });
 
 server.listen(PORT, () => {

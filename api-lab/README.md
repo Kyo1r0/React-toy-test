@@ -36,19 +36,17 @@ node api-lab/server.js
 呼んだあとに、**そのレスポンスを作った handler 関数のソースコードそのもの**が画面に出る
 （`handler.toString()` をサーバーが返している）。
 
+情報の渡し方が2通りあることを見せたいだけなので、練習用は2本だけ。
+
 | メソッド | パス | 見せたいこと |
 |---|---|---|
-| GET | `/api/hello?name=` | クエリパラメータ |
-| GET | `/api/dice?sides=&count=` | 入力チェックと `400` |
-| GET | `/api/todos` | 一覧の取得 |
-| POST | `/api/todos` | 作成 → `201` + `Location` ヘッダー |
-| GET | `/api/todos/:id` | パスパラメータ / `404` |
-| DELETE | `/api/todos/:id` | 削除 → `204`（本文なし） |
-| GET | `/api/secret` | ヘッダーによる認証 / `401` |
-| GET | `/api/weather?city=` | 外部APIへの中継（プロキシ） |
-| GET | `/api/__routes` | 自己紹介 |
+| GET | `/api/hello?name=` | 情報を**URL**に載せる（クエリパラメータ） |
+| POST | `/api/square` | 情報を**ボディ**に載せる。`{"number": 7}` → `49` |
 
-TODOはメモリ上に持っているだけなので、サーバーを再起動すると元に戻る。
+`/api/square` に `{"number": "7"}`（文字列）を送ると `400` が返る。
+「送られてきたものをサーバーが必ず検査する」という、APIで一番大事な部分の例。
+
+残り2本（`/api/weather` と `/api/__routes`）はこのページの裏方なので一覧には出していない。
 
 ## ファイル
 
